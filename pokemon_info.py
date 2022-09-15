@@ -59,7 +59,8 @@ gen_letter_dic = {
     'BDSP': '晶灿钻石/明亮珍珠',
     'LA': '传说 阿尔宙斯',
     'SP': '明亮珍珠',
-    'BD': '晶灿钻石'
+    'BD': '晶灿钻石',
+    'RGBY': ""
 }
 
 
@@ -97,6 +98,7 @@ def get_pokemon_info(pokemon_name):
         spread_str = re.sub(r"\{{2}巢穴\|([ap])\|([0-9|]*)}{2}", cave_replace, spread_str)
         # 替换 tt
         spread_str = re.sub(r"{{tt\|\*\|([^{}]*)}}", "(\\1)", spread_str)
+        # 替换
         # spread_str_grouped = re.findall(r"{{分布/main\|([0-9]*)\|([A-Z]*\|){5}([^|]*)\|([^|]*)\|([^|]*)\|[^|}]*}}", spread_str)
         spread_split = spread_str.split("|")
         print(spread_str.split("|"))
@@ -121,5 +123,5 @@ if __name__ == '__main__':
     for test_pokemon_name in test_pokemon_names:
         get_pokemon_info(test_pokemon_name)
     while True:
-        pokemon_name = input("输入宝可梦名称:")
-        get_pokemon_info("波克基斯")
+        pokemon_name_input = input("输入宝可梦名称:")
+        get_pokemon_info(pokemon_name_input)
