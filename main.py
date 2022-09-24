@@ -19,7 +19,7 @@ def save_pokemon(pokemon_id):
     if pokemon_sub_name is not None:
         saved_file_name = saved_file_name + "#" + pokemon_sub_name.replace("/", "#")
 
-    file = open('imgs/' + saved_file_name + '.png', 'ab')
+    file = open('pokemon_images/' + saved_file_name + '.png', 'ab')
     print("正在保存 " + saved_file_name)
     file.write(img.content)
     file.close()
