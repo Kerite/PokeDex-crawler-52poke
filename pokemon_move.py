@@ -1,9 +1,9 @@
-import csv
-import sqlite3
+"""
+技能列表
+"""
 from pathlib import Path
 
-from bs4 import BeautifulSoup, PageElement
-from typing.io import TextIO
+from bs4 import BeautifulSoup
 
 import utils
 import value_map_dict
@@ -20,7 +20,7 @@ skill_category_dict = {
 
 class PokemonMoveSpider(utils.SpiderBase):
     """
-    爬取宝可梦的特性列表
+    爬取宝可梦的技能列表
     """
 
     def __init__(self, output_type=OutputType.SQLITE, output_path: Path = Path("./pokemon.db")):
@@ -30,7 +30,7 @@ class PokemonMoveSpider(utils.SpiderBase):
         self._cursor.execute('DROP TABLE IF EXISTS pokemon_move')
         self._cursor.execute(
             'CREATE TABLE pokemon_move('
-            '  id INTEGER PRIMARY KEY AUTOINCREMENT,'
+            '  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,'
             '  move_id INTEGER,'
             '  name TEXT NOT NULL ,'
             '  jp_name TEXT NOT NULL,'

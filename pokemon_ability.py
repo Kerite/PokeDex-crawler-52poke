@@ -10,6 +10,7 @@ from typing.io import TextIO
 
 import utils
 from utils import OutputType
+from opencc import OpenCC
 
 
 class PokemonAbilitySpider:
@@ -58,7 +59,9 @@ class PokemonAbilitySpider:
         """
         ability_list_url = "https://wiki.52poke.com/wiki/%E7%89%B9%E6%80%A7%E5%88%97%E8%A1%A8"
         req = utils.request_get(ability_list_url)
-        bs = BeautifulSoup(req.text, features="html.parser")
+        converter = OpenCC()
+        source_str = converter.convert(req.text)
+        bs = BeautifulSoup(source_str, features="html.parser")
         source = bs.find_all('table', 'eplist')
         print(len(source))
 

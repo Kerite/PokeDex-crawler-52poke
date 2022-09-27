@@ -77,7 +77,7 @@ def get_specie_strength(
             else:
                 result = species_strength_dic['一般的样子']
         elif '超级' in form_name:
-            result = species_strength_dic['超級進化']
+            result = species_strength_dic['超级进化']
         else:
             result = fall_back_find(pokemon_dex_name, species_strength_dic, form_name)
     print("种族值", result, form_name)

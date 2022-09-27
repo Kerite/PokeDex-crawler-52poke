@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import utils
+import opencc
 
 proxies = {
     'http': '127.0.0.1:7890',
@@ -98,14 +99,15 @@ def get_pokemon_info(pokemon_name):
     r = utils.request_get(url)
     soup = BeautifulSoup(r.text, features="html.parser")
     source_code = soup.find("textarea", {'name': "wpTextbox1"}).string \
-        .replace('圖鑑', '图鉴') \
         .replace('	', '')
+    converter = opencc.OpenCC()
+    source_code = converter.convert(source_code)
 
     # 获取基本信息
     print("===基本信息===")
     dex_basic_info = {}
     # dex_basic_info_str = re.sub(r"{{[\S ]*}}", "", source_code)
-    dex_basic_info_str = re.findall(r"{{寶可夢信息框[\S\n ]*?==", source_code)[0]
+    dex_basic_info_str = re.findall(r"{{宝可梦信息框[\S\n ]*?==", source_code)[0]
     # print("dex_basic_info_str", dex_basic_info_str)
     # print(dex_basic_info_str)
     dex_basic_infos = re.findall(r"\|(\S*?)=([\S \n]*?)\n", dex_basic_info_str)
