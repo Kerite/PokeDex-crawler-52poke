@@ -5,8 +5,7 @@ import re
 from bs4 import BeautifulSoup
 
 import pokemon_info
-import utils
-import value_map_dict
+from src import utils, value_map_dict
 
 """
 映射地区形态的名称到枚举的键
@@ -43,7 +42,7 @@ def update_pokemon_list(start_dex_num: int):
     soup = BeautifulSoup(r.text, features="html.parser")
 
     tables = soup.find_all("table", "eplist")
-    with open('./output_csv/pokemon_list.csv', 'a', newline='', encoding='UTF-8') as csv_file:
+    with open('../../output_csv/pokemon_list.csv', 'a', newline='', encoding='UTF-8') as csv_file:
         pokemon_writer = csv.writer(csv_file, quoting=csv.QUOTE_NONNUMERIC)
         generation = 1
         for pokemon_table in tables:

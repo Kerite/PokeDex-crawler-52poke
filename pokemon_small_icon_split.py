@@ -2,7 +2,7 @@ from PIL import Image
 import requests
 from io import BytesIO
 
-import utils
+from src import utils
 
 proxies = {
     'http': '127.0.0.1:7890',

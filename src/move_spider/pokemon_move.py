@@ -5,9 +5,8 @@ from pathlib import Path
 
 from bs4 import BeautifulSoup
 
-import utils
-import value_map_dict
-from utils import OutputType
+from src import utils, value_map_dict
+from src.utils import OutputType
 
 skill_category_dict = {
     '变化': 'STATUS',

@@ -1,8 +1,7 @@
 import csv
 
 import re
-import utils
-import value_map_dict
+from src import utils, value_map_dict
 
 # 体型（在X/Y和宝石复刻有变动（精灵））
 body_name_list = [

@@ -8,8 +8,8 @@ from pathlib import Path
 from bs4 import BeautifulSoup, PageElement
 from typing.io import TextIO
 
-import utils
-from utils import OutputType
+from src import utils
+from src.utils import OutputType
 from opencc import OpenCC
 
 
@@ -98,8 +98,3 @@ class PokemonAbilitySpider:
             self._connection.close()
         elif self.__output_type == OutputType.CSV:
             self.__csv_file.close()
-
-
-if __name__ == '__main__':
-    PokemonAbilitySpider(output_path=utils.default_sqlite_path) \
-        .fetch_pokemon_ability_list()

@@ -1,7 +1,6 @@
-import requests
 from bs4 import BeautifulSoup
 import re
-import utils
+from src import utils
 import opencc
 
 proxies = {

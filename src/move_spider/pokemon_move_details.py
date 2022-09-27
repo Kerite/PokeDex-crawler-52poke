@@ -8,13 +8,10 @@ from pathlib import Path
 
 import opencc
 
-import constants
-import utils
-import value_map_dict
-from constants import generation_count
-from pokemon_move import PokemonMoveSpider
-from utils import SpiderBase, OutputType
-from value_map_dict import game_code_to_generation_dict, learn_set_table_column_mapping
+from src import constants, utils, value_map_dict
+from src.constants import generation_count
+from src.move_spider.pokemon_move import PokemonMoveSpider
+from src.utils import SpiderBase, OutputType
 
 
 def _test_function(move_item: list[str], move_add_generation: int):
@@ -103,6 +100,14 @@ class LearnSetTutorialAll:
             'data': self.per_generation_data,
             'form': self.pokemon_form
         }
+
+
+class MoveListLevel:
+    pass
+
+
+class MoveListTm:
+    pass
 
 
 class PokemonMoveDetailsSpider(SpiderBase, ABC):
