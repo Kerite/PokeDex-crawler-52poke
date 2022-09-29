@@ -202,43 +202,33 @@ special_pokemon_form_name_map = {
 }
 
 game_code_to_generation_dict: dict[str, int] = {
-    "RGBY": 1,
-    "GSC": 2,
-    'G': 2,
-    'C': 2,
+    'LPLE': 7,
+    'BDSP': 8,
+    'HGSS': 4,
     'FRLG': 3,
-    "PtHGSS": 4,
-    "BW": 5,
-    "B": 5,
-    "W": 5,
-    "B2W2": 5,
-    "B2": 5,
-    "W2": 5,
-    "XY": 6,  # XY
-    "X": 6,  # X
-    "Y": 6,  # Y
-    "ORAS": 6,  # 宝石复刻
-    "OR": 6,  # 红宝石复刻
-    "AS": 6,  # 蓝宝石复刻
-    "S": 7,  # 日
-    "M": 7,  # 月
-    "USUM": 7,  # 究极日月
-    "US": 7,  # 究极日
-    "UM": 7,  # 究极月
-    "LPLE": 7,  # 去皮去伊
-    "LP": 7,  # 去吧皮卡丘
-    "LE": 7,  # 去吧伊布
-    "SWSH": 8,  # 剑盾
-    "SW": 8,  # 剑
-    "SH": 8,  # 盾
-    "BDSP": 8,  # 珍钻复刻
-    "BD": 8,  # 晶灿钻石
-    "SP": 8,  # 明亮珍珠
-    "LA": 8  # 传说阿尔宙斯
+    'ORAS': 6,
+    'USUM': 7,
+    'LA': 8
 }
 
 learn_set_table_column_mapping = {
     'yes': True,
     'no': False,
     '': False
+}
+
+DAMAGE_CATEGORY_MAP_DICT = {
+    '物理': 'PHYSICAL',
+    '特殊': 'SPECIAL',
+    '变化': 'STATUS',
+    '极巨': 'MAX',
+    '超极巨': 'GIGANTAMAX',
+    'Z': 'Z_MOVE'
+}
+
+BOOL_MAPPING_DICT = {
+    'yes': True,
+    'no': False,
+    '': False,
+    None: False
 }

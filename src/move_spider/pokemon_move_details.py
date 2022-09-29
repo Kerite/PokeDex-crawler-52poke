@@ -1,15 +1,17 @@
 """
 技能详细信息
 """
-import json
 import re
 from abc import ABC
 from pathlib import Path
+from urllib.parse import unquote
 
 import opencc
 
-from src import constants, utils, value_map_dict
+import __utils as privateUtils
+from src import utils, value_map_dict
 from src.constants import generation_count
+from src.move_spider.move_row_parsers import MoveListRowParser
 from src.move_spider.pokemon_move import PokemonMoveSpider
 from src.utils import SpiderBase, OutputType
 
@@ -35,7 +37,6 @@ def _test_function(move_item: list[str], move_add_generation: int):
         if current_generation > generation_count:
             continue
         if move_item_column.__contains__('='):
-            print("(特殊版本)")
             [equal_left, equal_right] = move_item_column.split('=')
             if equal_left in ['except', 'v', 'alt', 'note', 'no']:
                 addition_notes[equal_left] = equal_right
@@ -44,70 +45,17 @@ def _test_function(move_item: list[str], move_add_generation: int):
             else:
                 learn_list[current_generation - 2][equal_left] = equal_right
         else:
-            print("正常世代", current_generation)
+            # print('[DEBUG]', "第", current_generation, '世代读取到数据')
             if move_item_column != '':
                 learn_list[current_generation - 1]['default'] = move_item_column
             current_generation += 1
     if special_form is not None:
         print(move_item[2] + "(" + special_form + ")", learn_list)
     else:
-        print(move_item[2], learn_list)
+        print('  - 宝可梦', move_item[2], learn_list)
     for (idx, item) in enumerate(learn_list):
-        print('  - 第' + (idx + 1).__str__() + '世代', item)
+        print('    - 第' + (idx + 1).__str__() + '世代', item)
     return special_form, learn_list
-
-
-class ArgumentError(Exception):
-    pass
-
-
-class LearnSetTutorialAll:
-    """
-    用于解析 传授技能的行
-    """
-    __row: list[str]
-    pokemon_form: str | None = None
-    per_generation_data = [False] * constants.tutorial_all_game_list.__len__()
-    additional_info = {}
-    dex_number = 0
-
-    def __init__(self, row: list[str]):
-        self.__row = row
-        temp = row[5]
-        if len(row) < 4:
-            raise ArgumentError
-        if temp.startswith('form='):
-            self.pokemon_form = temp.strip('form=')
-            row.remove(temp)
-        self.dex_number = int(row[1])
-        pokemon_name: str = row[2]
-        type_1: str = row[3]
-        type_2: str | None = row[4]
-        for (sub_index, column_str) in enumerate(row[5:]):
-            if column_str.__contains__('='):
-                [column_equal_left, column_equal_right] = column_str.split('=')
-                if column_equal_left in ['alt', 'note', 'v']:
-                    self.additional_info[column_equal_left] = column_equal_right
-            if column_str.strip() == '':
-                self.per_generation_data[sub_index + 1] = False
-            else:
-                self.per_generation_data[sub_index + 1] = True
-
-    def pack(self):
-        return {
-            'dex_number': self.dex_number,
-            'source': 'TUTORIAL',
-            'data': self.per_generation_data,
-            'form': self.pokemon_form
-        }
-
-
-class MoveListLevel:
-    pass
-
-
-class MoveListTm:
-    pass
 
 
 class PokemonMoveDetailsSpider(SpiderBase, ABC):
@@ -119,57 +67,11 @@ class PokemonMoveDetailsSpider(SpiderBase, ABC):
         super(PokemonMoveDetailsSpider, self).__init__(output_type, output_path)
 
     def _init_database(self):
-        self._cursor.execute(
-            'DROP TABLE IF EXISTS pokemon_move_basic'
-        )
-        self._cursor.execute(
-            'CREATE TABLE pokemon_move_basic('
-            '   id INTEGER PRIMARY KEY AUTOINCREMENT,'
-            '   move_id INTEGER,'
-            '   name TEXT NOT NULL,'
-            '   jp_name TEXT NOT NULL,'
-            '   en_name TEXT NOT NULL,'
-            '   type TEXT NOT NULL,'
-            '   damage_category TEXT NOT NULL,'
-            '   pp INTEGER NOT NULL,'
-            '   power TEXT NOT NULL,'
-            '   accuracy TEXT NOT NULL,'
-            '   generation INTEGER NOT NULL,'
-            '   touches INTEGER NOT NULL, --是否为接触招式--\n'
-            '   protect INTEGER NOT NULL, --是否可以被守住--\n'
-            '   magic_coat INTEGER NOT NULL, --是否受魔法反射影响\n'
-            '   snatch INTEGER NOT NULL, -- 是否可以被抢夺\n'
-            '   mirror_move INTEGER NOT NULL, -- 是否可以被鹦鹉学舌影响\n'
-            '   kings_rock INTEGER NOT NULL, -- 是否受王者之证等道具影响\n'
-            '   sound INTEGER NOT NULL, --是否是声音招式\n'
-            '   target INTEGER NOT NULL --技能影响范围\n'
-            ')'
-        )
-        self._connection.commit()
-        self._cursor.execute(
-            'CREATE INDEX index_move_id ON pokemon_move_basic(move_id)'
-        )
-        self._connection.commit()
-        self._cursor.execute(
-            'DROP TABLE IF EXISTS pokemon_move_learn'
-        )
-        self._cursor.execute(
-            'CREATE TABLE pokemon_move_learn('
-            '   id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,'
-            '   move_table_id INTEGER NOT NULL,'
-            '   pokemon_details_id INTEGER NOT NULL,'
-            '   learn_source VARCHAR(10) NOT NULL,'
-            '   gen1 TEXT,'
-            '   gen2 TEXT,'
-            '   gen3 TEXT,'
-            '   gen4 TEXT,'
-            '   gen5 TEXT,'
-            '   gen6 TEXT,'
-            '   gen7 TEXT,'
-            '   gen8 TEXT'
-            ')'
-        )
-        self._connection.commit()
+        # <editor-fold defaultstate="collapsed" desc="初始化数据库">
+        privateUtils.create_move_basic_table(self._connection)
+        privateUtils.create_move_teach_table(self._connection)
+        privateUtils.create_move_learn_table(self._connection)
+        # </editor-fold>
 
     def fetch(self, move_list: list):
         """
@@ -177,162 +79,120 @@ class PokemonMoveDetailsSpider(SpiderBase, ABC):
         :param move_list:
         :return:
         """
-        for (idx, [move_num, name, _, _, _, _, _, _, _, _, _]) in enumerate(move_list):
+        for (idx, [move_num, name, _, _, _, _, _, _, _, _, _, url]) in enumerate(move_list):
+            name = unquote(url.split('/')[-1])
             self.process_single_move(name)
 
     def process_single_move(self, move_name: str):
+        from src.constants import PRINT_PREFIX_DEBUG, PRINT_SUFFIX, PRINT_PREFIX_HEADLINE
+        for _ in range(2):
+            print()
+        print('解析技能', move_name)
+        from move_row_parsers import LearnSetTutorialAllParser
         learn_list = []
-        req = utils.request_parse(r"https://wiki.52poke.com/index.php?title=" + move_name + r"（招式）&action=edit")
-        # print("Request", req)
+        req = utils.request_parse(r"https://wiki.52poke.com/index.php?title=" + move_name + r"&action=edit")
+        move_name = move_name.split('（')[0]
         source_code = req.find("textarea").string
         converter = opencc.OpenCC()
         source_code = converter.convert(source_code)
-
+        move_name = converter.convert(move_name)
         '''
         处理基础信息（页面右上角的面板)
         '''
+        print(PRINT_PREFIX_HEADLINE)
         print("======================================")
-        print("=           开始解析基本信息           =")
-        print("======================================\n")
-        basic_info_dict = {}
+        print("=           开始解析基本信息            =")
+        print("======================================" + PRINT_SUFFIX)
+        basic_info_dict = {
+            'n': None,
+            'name': None,
+            'jname': None,
+            'enname': None,
+            'type': None,
+            'damagecategory': None
+        }
+        # <editor-fold defaultstate="collapsed" desc="解析基本信息">
         basic_info = re.findall(r"{{招式信息框([\s\S]*?)==", source_code)[0].replace('\n', '')[:-2]
         clear_basic_info = re.sub(r"{{([\s\S]*?)}}", "", basic_info)
         print("整理后的基本信息源码(clear_basic_info):", clear_basic_info)
         basic_info_list = re.findall(r"\|(.*?)=([^|]*)", clear_basic_info)
-        # print("BasicInfoList", basic_info_list)
         for (basic_info_key, basic_info_value) in basic_info_list:
             basic_info_dict[basic_info_key] = basic_info_value.strip()
+        # </editor-fold>
         print("获取的基本信息(basic_info_dict):", basic_info_dict)
-        print("\n============技能基本信息解析完毕============\n")
+        for temp_basic_info_key in ['touches', 'protect', 'magiccoat', 'snatch',
+                                    'mirrormove', 'kingsrock', 'sound']:
+            if temp_basic_info_key not in basic_info_dict.keys():
+                basic_info_dict[temp_basic_info_key] = None
+        if 'target' not in basic_info_dict:
+            basic_info_dict['target'] = 0
+        insert_basic_array = [
+            basic_info_dict['n'], basic_info_dict['name'],
+            basic_info_dict['jname'], basic_info_dict['enname'],
+            value_map_dict.pokemon_types[basic_info_dict['type']],
+            value_map_dict.DAMAGE_CATEGORY_MAP_DICT[basic_info_dict['damagecategory']],
+            basic_info_dict['basepp'], basic_info_dict['power'], basic_info_dict['accuracy'],
+            basic_info_dict['gen'],
+            value_map_dict.BOOL_MAPPING_DICT[basic_info_dict['touches']],
+            value_map_dict.BOOL_MAPPING_DICT[basic_info_dict['protect']],
+            value_map_dict.BOOL_MAPPING_DICT[basic_info_dict['magiccoat']],
+            value_map_dict.BOOL_MAPPING_DICT[basic_info_dict['snatch']],
+            value_map_dict.BOOL_MAPPING_DICT[basic_info_dict['mirrormove']],
+            value_map_dict.BOOL_MAPPING_DICT[basic_info_dict['kingsrock']],
+            value_map_dict.BOOL_MAPPING_DICT[basic_info_dict['sound']],
+            basic_info_dict['target']
+        ]
+        privateUtils.insert_basic_info(self._connection, insert_basic_array)
+        print(f"{PRINT_PREFIX_HEADLINE}============技能基本信息解析完毕============{PRINT_SUFFIX}")
 
-        '''
-        处理可以学会该招式的宝可梦
-        当startGen为2以后时，去皮去伊视作不存在，除非指定
-        '''
+        print(PRINT_PREFIX_HEADLINE)
         print("======================================")
-        print("=           开始解析学习列表           =")
-        print("======================================\n")
+        print("=           开始解析学习列表            =")
+        print("======================================" + PRINT_SUFFIX)
         move_list_level_str = re.sub(r"{{(?!Movelist)(?P<content>.[^{^}]*?)}}", _process_special, source_code)
-        # 这行获取招式学习器表格的表头(eg.'一般|2||TM17|TM17|TM17|TM17|TM17|TM17|LPLE=TM07|TM25')
-        tm_move_header_src_list = re.findall(r"{{Movelistheader\|学习器\|([\s\S]*?)}}", source_code)
-        # 因为有的技能没有技能机的获取方式所以加个判断
-        tm_list = [{} for _ in range(generation_count)]
-        if len(tm_move_header_src_list) > 0:
-            tm_move_header_src = tm_move_header_src_list[0]
-            split_tm_move_header = tm_move_header_src.split('|')
-            print("技能机表格头源码", tm_move_header_src)
-            tm_start_generation = int(split_tm_move_header[1])
-            current_append_index = tm_start_generation - 1
-            # 遍历技能机表头的从第3格 + 技能机加入的世代到最后
-            for tm_str in split_tm_move_header[(1 + tm_start_generation):]:
-                # print(idx + tm_start_generation - 1)
-                if tm_str.__contains__('='):
-                    [tm_item_key, tm_item_value] = tm_str.split('=')
-                    tm_list[value_map_dict.game_code_to_generation_dict[tm_item_key] - 1][tm_item_key] = tm_item_value
-                else:
-                    tm_list[current_append_index]['default'] = tm_str
-                    current_append_index += 1
-            print("技能机列表", tm_list)
-        # 每个表格行的源码由{{Movelist/获取方式/技能加入的世代(all,gen1,gen2,gen3...)|.....}}
-        move_list: list[str] = re.findall(r"{{Movelist/[\s\S]*?}}", move_list_level_str)
+        move_list: list[str] = re.findall(r"{Movelist/[\s\S]*?}", move_list_level_str)
         for move_item in move_list:
-            print(move_item)
-            move_item = move_item.strip('{').strip('}').split('|')
-            move_item_prefix_list = move_item[0].split('/')
-            move_learn_type = move_item_prefix_list[1]
-            if move_item_prefix_list[2] == 'all':
-                move_add_generation = 1
-            else:
-                move_add_generation = int(move_item_prefix_list[2].strip('gen'))
-            print("技能获取的方式(move_learn_type):", move_learn_type)
-            print("加入的世代:", move_add_generation)
-            match move_learn_type:
-                case 'level':  # 升级技能条目
-                    (special_form, learn_column) = _test_function(move_item, move_add_generation)
-                    learn_list.append({
-                        'dex_number': int(move_item[1]),
-                        'source': 'LEVEL',
-                        'data': learn_column,
-                        'form': special_form
-                    })
-                case 'tm':  # 技能机条目
-                    print("各世代的技能机:", tm_list)
-                    (special_form, learn_column) = _test_function(move_item, move_add_generation)
-                    learn_list.append({
-                        'dex_number': int(move_item[1]),
-                        'source': 'TM_MACHINE',
-                        'data': learn_column,
-                        'form': special_form
-                    })
-                case 'breed':  # 通过遗传
-                    (special_form, learn_column) = _test_function(move_item, move_add_generation)
-                    learn_list.append({
-                        'dex_number': int(move_item[1]),
-                        'source': 'BREED',
-                        'data': learn_column,
-                        'form': special_form
-                    })
-            print("===一行结束===\n")
-        print("\n============宝可梦学习列表（不包括教授招式）解析完毕============\n")
+            print(f'{PRINT_PREFIX_DEBUG}源码:', f'{move_item}{PRINT_SUFFIX}')
+            print('  - 技能名', move_name)
+            move_item = move_item.strip('{').strip('}').replace('\n', '').split('|')
+            _parser = MoveListRowParser(move_item)
+            _parser.print_debug_info()
+            move_id = privateUtils.select_move_id(
+                connection=self._connection,
+                move_name=move_name,
+            )
+            _parser.insert_data(
+                connection=self._connection,
+                move_id=move_id
+            )
+        print(f"{PRINT_PREFIX_HEADLINE}============ 宝可梦学习列表（不包括教授招式）解析完毕 ============{PRINT_SUFFIX}")
 
+        print(PRINT_PREFIX_HEADLINE)
         print("======================================")
-        print("=           开始解析教授列表           =")
-        print("======================================")
-        print()
-        learn_set_str_list: list[str] = re.findall(r"{{learnset/[\s\S]*?}}", source_code)
+        print("=           开始解析教授列表            =")
+        print(f"======================================{PRINT_SUFFIX}")
+        learn_set_str_list: list[str] = re.findall(r"{learnset/[\s\S]*?}", source_code)
         for learn_set_item_str in learn_set_str_list:
-            learn_item_group = learn_set_item_str.strip('{').strip('}').split('|')
+            print(f'{PRINT_PREFIX_DEBUG}{learn_set_item_str}{PRINT_SUFFIX}')
+            learn_item_group = learn_set_item_str.strip('{').strip('}').replace('\n', '').split('|')
             learn_set_type = learn_item_group[0].split('/')[1]
-            print("LearnSet类型", learn_set_item_str)
+            print("  - LearnSet", '技能教授')
+            print("    - 类型", learn_set_type)
             match learn_set_type:
                 case 'tutorall':
-                    packed_data = LearnSetTutorialAll(learn_item_group).pack()
+                    print("    - 技能名", move_name)
+                    # <editor-fold defaultstate="collapsed" desc="解析数据并插入数据库">
+                    selected_move_id = privateUtils.select_move_id(move_name, self._connection)
+                    _parser = LearnSetTutorialAllParser(row=learn_item_group, move_id=selected_move_id)
+                    packed_data = _parser.pack_debug_print_data()
+                    _parser.insert_database(connection=self._connection)
                     learn_list.append(packed_data)
-                    print("解析到的数据：", packed_data)
-            print("===一行结束===")
+                    # </editor-fold>
+                case _:
+                    print(f'{PRINT_PREFIX_DEBUG}[DEBUG]', '跳过解析')
             print()
 
-        print("============End============\n")
-        for learn_row in learn_list:
-            if learn_row == {}:
-                continue
-            cur = self._connection.cursor()
-            cur.execute(
-                'SELECT id FROM pokemon_move WHERE name = ?',
-                [move_name]
-            )
-            move_id = cur.fetchall()[0][0]
-            cur.close()
-            cur = self._connection.cursor()
-            print(learn_row)
-            pokemon_id = None
-            if learn_row['form'] is not None:
-                fetched_pokemons = cur.execute(
-                    'SELECT id FROM pokemon_detail WHERE dex_number = ? AND form_name LIKE \'%\' || ? || \'%\'',
-                    [learn_row['dex_number'], learn_row['form']]
-                ).fetchall()
-                print("Selected Pokemon", [learn_row['dex_number'], learn_row['form']], fetched_pokemons)
-                pokemon_id = fetched_pokemons[0][0]
-            else:
-                pokemon_id = cur.execute(
-                    'SELECT id FROM pokemon_detail WHERE dex_number = ?',
-                    [learn_row['dex_number']]
-                ).fetchall()[0][0]
-                print("Selected Pokemon", pokemon_id)
-
-            input_data = [move_id, pokemon_id, learn_row['source']]
-            for learn_row_data in learn_row['data']:
-                input_data.append(json.dumps(learn_row_data))
-            print("Input data", input_data)
-
-            self._connection.execute(
-                'INSERT INTO pokemon_move_learn('
-                'move_table_id, pokemon_details_id, learn_source,'
-                'gen1, gen2, gen3, gen4, gen5, gen6, gen7, gen8)'
-                'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                input_data
-            )
-            self._connection.commit()
+        print(f"{PRINT_PREFIX_HEADLINE}============ 宝可梦教授列表解析完毕 ============{PRINT_SUFFIX}")
         return learn_list
 
 
@@ -340,16 +200,26 @@ def _process_special(match: re.Match):
     """
     处理网页中显示为宝可梦缩略图的内容
     """
-    matched_str = match.group('content')
-    split_matched = matched_str.split('|')
-    match split_matched[0]:
-        case 'MSP':
-            return 'PM(' + split_matched[1] + '-' + split_matched[2] + '),'
-    return matched_str
+    try:
+        matched_str = match.group('content')
+        split_matched = matched_str.split('|')
+        match split_matched[0]:
+            case 'MSP':
+                if len(split_matched) > 2:
+                    return 'PM(' + split_matched[1] + '-' + split_matched[2] + '),'
+                else:
+                    return f'PM({split_matched[1]}),'
+            case 'MSPN':
+                return f'PMS({split_matched[1]})'
+        return matched_str
+    except IndexError:
+        print('\033[1;33m', '字符串匹配数组越界', match.group('content'), '\033[0m')
+        raise
 
 
 if __name__ == '__main__':
-    # result_list = PokemonMoveDetailsSpider(output_path=utils.default_sqlite_path).process_single_move('地球上投')
+    # result_list = PokemonMoveDetailsSpider(output_path=utils.default_sqlite_path).process_single_move('突袭（招式）')
     # print(json.dumps(result_list))
+    # 获取技能列表
     moves = PokemonMoveSpider(OutputType.NO_OUT_PUT).fetch()
     PokemonMoveDetailsSpider(output_path=utils.default_sqlite_path).fetch(moves)

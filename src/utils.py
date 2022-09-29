@@ -3,15 +3,15 @@ import os.path
 import pathlib
 import sqlite3
 from abc import abstractmethod
+from enum import Enum
+from io import BytesIO
 
 import requests
+from PIL import Image
+from bs4 import BeautifulSoup
 from typing.io import TextIO
 
-from value_map_dict import special_pokemon_form_name_map
-from bs4 import BeautifulSoup
-from io import BytesIO
-from PIL import Image
-from enum import Enum
+from src.value_map_dict import special_pokemon_form_name_map
 
 proxies = {
     'http': '127.0.0.1:7890',
@@ -36,71 +36,68 @@ def request_parse(url: str):
     return BeautifulSoup(req.text, features="html.parser")
 
 
-def get_specie_strength(
-        species_strength_dic: dict,
-        pokemon_dex_name: str,
-        form_name: str
-):
-    if form_name is None:
-        if pokemon_dex_name in species_strength_dic:
-            result = species_strength_dic[pokemon_dex_name]
-        elif '第六世代起' in species_strength_dic:
-            result = species_strength_dic['第六世代起']
-        elif '第七世代起' in species_strength_dic:
-            result = species_strength_dic['第七世代起']
-        elif '一般' in species_strength_dic:
-            result = species_strength_dic['一般']
-        elif '一般的样子' in species_strength_dic:
-            result = species_strength_dic['一般的样子']
-        else:
-            result = species_strength_dic[form_name]
-    else:
-        print('Form', pokemon_dex_name, form_name, species_strength_dic)
-        if (pokemon_dex_name in special_pokemon_form_name_map) and (
-                form_name in special_pokemon_form_name_map[pokemon_dex_name]):
-            print(special_pokemon_form_name_map[pokemon_dex_name][form_name])
-            result = species_strength_dic[special_pokemon_form_name_map[pokemon_dex_name][form_name]]
-        elif form_name == pokemon_dex_name:
-            result = fall_back_find(pokemon_dex_name, species_strength_dic, form_name)
-        elif ('伽勒爾' in form_name) or ('伽勒尔' in form_name):
-            result = species_strength_dic['伽勒尔的样子']
-        elif '洗翠' in form_name:
-            result = species_strength_dic['洗翠的样子']
-        elif '阿罗拉' in form_name:
-            if '阿罗拉的样子' in species_strength_dic:
-                result = species_strength_dic['阿罗拉的样子']
-            else:
-                result = fall_back_find(pokemon_dex_name, species_strength_dic, form_name)
-        elif '超极巨化' in form_name:
-            if '一般' in species_strength_dic:
-                result = species_strength_dic['一般']
-            else:
-                result = species_strength_dic['一般的样子']
-        elif '超级' in form_name:
-            result = species_strength_dic['超级进化']
-        else:
-            result = fall_back_find(pokemon_dex_name, species_strength_dic, form_name)
-    print("种族值", result, form_name)
-    return result
-
-
-def fall_back_find(
-        pokemon_dex_name: str,
-        species_strength_dic: dict,
-        form_name: str
-):
-    if pokemon_dex_name in species_strength_dic:
-        return species_strength_dic[pokemon_dex_name]
-    elif '第六世代起' in species_strength_dic:
-        return species_strength_dic['第六世代起']
-    elif '第七世代起' in species_strength_dic:
-        return species_strength_dic['第七世代起']
-    elif '一般' in species_strength_dic:
-        return species_strength_dic['一般']
-    elif '一般的样子' in species_strength_dic:
-        return species_strength_dic['一般的样子']
-    else:
-        return species_strength_dic[form_name]
+# def get_specie_strength(
+#         species_strength_dic: dict,
+#         pokemon_dex_name: str,
+#         form_name: str
+# ):
+#     # 宝可梦只有一种形态
+#     if form_name is None:
+#         # 宝可梦的图鉴名字就在字典里
+#         if pokemon_dex_name in species_strength_dic:
+#             result = species_strength_dic[pokemon_dex_name]
+#         # 宝可梦的图鉴名字不在字典里则在字典里寻找以下键
+#         else:
+#             for judge_key in ['第六世代起', '第七世代起', '第七世代起', '一般', '一般的样子']:
+#                 if judge_key in species_strength_dic:
+#                     result = species_strength_dic[judge_key]
+#     else:
+#         print('Form', pokemon_dex_name, form_name, species_strength_dic)
+#         if (pokemon_dex_name in special_pokemon_form_name_map) and (
+#                 form_name in special_pokemon_form_name_map[pokemon_dex_name]):
+#             print(special_pokemon_form_name_map[pokemon_dex_name][form_name])
+#             result = species_strength_dic[special_pokemon_form_name_map[pokemon_dex_name][form_name]]
+#         elif form_name == pokemon_dex_name:
+#             result = fall_back_find(pokemon_dex_name, species_strength_dic, form_name)
+#         elif ('伽勒爾' in form_name) or ('伽勒尔' in form_name):
+#             result = species_strength_dic['伽勒尔的样子']
+#         elif '洗翠' in form_name:
+#             result = species_strength_dic['洗翠的样子']
+#         elif '阿罗拉' in form_name:
+#             if '阿罗拉的样子' in species_strength_dic:
+#                 result = species_strength_dic['阿罗拉的样子']
+#             else:
+#                 result = fall_back_find(pokemon_dex_name, species_strength_dic, form_name)
+#         elif '超极巨化' in form_name:
+#             if '一般' in species_strength_dic:
+#                 result = species_strength_dic['一般']
+#             else:
+#                 result = species_strength_dic['一般的样子']
+#         elif '超级' in form_name:
+#             result = species_strength_dic['超级进化']
+#         else:
+#             result = fall_back_find(pokemon_dex_name, species_strength_dic, form_name)
+#     print("种族值", result, form_name)
+#     return result
+#
+#
+# def fall_back_find(
+#         pokemon_dex_name: str,
+#         species_strength_dic: dict,
+#         form_name: str
+# ):
+#     if pokemon_dex_name in species_strength_dic:
+#         return species_strength_dic[pokemon_dex_name]
+#     elif '第六世代起' in species_strength_dic:
+#         return species_strength_dic['第六世代起']
+#     elif '第七世代起' in species_strength_dic:
+#         return species_strength_dic['第七世代起']
+#     elif '一般' in species_strength_dic:
+#         return species_strength_dic['一般']
+#     elif '一般的样子' in species_strength_dic:
+#         return species_strength_dic['一般的样子']
+#     else:
+#         return species_strength_dic[form_name]
 
 
 def flat_list(input_list: list):

@@ -64,9 +64,11 @@ class PokemonMoveSpider(utils.SpiderBase):
                 tds = skill_row.find_all("td")
                 if len(tds) > 0:
                     if tds[0].string is not None:
-                        skill_id = tds[0].string.replace("\n", "")
-                        skill_name = tds[1].a.string
+                        skill_id = tds[0].string.replace("\n", "")  # 技能编号
+                        skill_name = tds[1].a.string  # 技能名字
+                        skill_url = tds[1].a.attrs['href']
                         if skill_name is None:
+                            skill_url = tds[1].contents[1].attrs['href']
                             skill_name = tds[1].contents[1].string
                         skill_jp_name = tds[2].string.replace("\n", "")
                         skill_en_name = tds[3].string
@@ -81,9 +83,9 @@ class PokemonMoveSpider(utils.SpiderBase):
                         skill_description = tds[9].string.replace("\n", "")
                         values = [
                             skill_id.replace('—', ''),
-                            skill_name, skill_jp_name, skill_en_name,
+                            skill_name.strip('\u200e'), skill_jp_name, skill_en_name,
                             value_map_dict.pokemon_types[skill_type], skill_category_dict[skill_damage], skill_power,
-                            skill_accuracy, skill_pp, skill_description, skill_gen + 1
+                            skill_accuracy, skill_pp, skill_description, skill_gen + 1, skill_url
                         ]
                         self._save_data(values)
                         result.append(values)
@@ -98,4 +100,6 @@ class PokemonMoveSpider(utils.SpiderBase):
 
 
 if __name__ == "__main__":
-    PokemonMoveSpider(output_path=utils.default_sqlite_path).fetch()
+    # PokemonMoveSpider(output_path=utils.default_sqlite_path).fetch()
+    for item in PokemonMoveSpider(output_type=OutputType.NO_OUT_PUT).fetch():
+        print(item)

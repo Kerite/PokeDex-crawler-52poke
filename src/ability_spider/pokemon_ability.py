@@ -1,16 +1,16 @@
 """
-保存特性列表到数据库
+保存特性列表 支持到数据库或者CSV
 """
 import csv
 import sqlite3
 from pathlib import Path
 
 from bs4 import BeautifulSoup, PageElement
+from opencc import OpenCC
 from typing.io import TextIO
 
 from src import utils
 from src.utils import OutputType
-from opencc import OpenCC
 
 
 class PokemonAbilitySpider:
