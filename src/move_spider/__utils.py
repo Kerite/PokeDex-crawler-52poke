@@ -129,7 +129,7 @@ def create_move_learn_table(connection: Connection):
         f'  lets_go TEXT,'
         f'  sword_shield TEXT,'
         f'  brilliant_diamond_shinning_pearl TEXT,'
-        f'  leagend_arceus TEXT,'
+        f'  legend_arceus TEXT,'
         f'  additional_gender TEXT,'
         f'  additional_note TEXT,'
         f'  additional_generation TEXT,'

@@ -66,7 +66,7 @@ MOVE_LEARN_GENERATION_DEFAULT_GAME = [
 
 MOVE_LEARN_TYPE = {
     'level': 'LEVEL',
-    'tm': 'MOVE_MACHINE',
+    'tm': 'TM_MACHINE',
     'breed': 'BREED'
 }
 

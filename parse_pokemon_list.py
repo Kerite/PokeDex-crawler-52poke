@@ -1,7 +1,9 @@
 import csv
 
 import re
-from src import utils, value_map_dict
+
+import src.constants
+from src import utils, value_map_dict, constants
 
 # 体型（在X/Y和宝石复刻有变动（精灵））
 body_name_list = [
@@ -242,14 +244,15 @@ def parse_key(
 
 
 def process_image(image_code_str: str | None, image_str: str | None, saved_name: str):
-    print("Handling Image", image_code_str, image_str)
+    print(f"{src.constants.PRINT_PREFIX_DEBUG}Handling Image", image_code_str, image_str, 'To',
+          f'{saved_name}{constants.PRINT_SUFFIX}')
     if image_str is not None:
         utils.download_media(image_str.replace(' ', '_'), saved_name)
     elif re.match(r'\[\[File:[\S ]*?\|[0-9]{1,9}px]]', image_code_str):
         image_code = re.findall(r'\[\[File:([\S ]*?)\|[0-9]{1,9}px]]', image_code_str)[0]
         utils.download_media(image_code.replace(' ', '_'), saved_name)
     else:
-        print("Image Fallback", image_code_str, image_str)
+        print(f"[ERROR]Image Fallback", image_code_str, image_str)
 
 
 if __name__ == '__main__':

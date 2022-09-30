@@ -56,7 +56,7 @@ class LearnSetTutorialAllParser:
             elif column_equal_left == 'form':
                 self.pokemon_form = column_equal_right
             elif column_equal_left.isdigit():
-                if column_equal_right in ['yes', '1'] :
+                if column_equal_right in ['yes', '1']:
                     column_game_index = int(column_equal_left) - 1
                     game_key = GAME_FULL_LIST[column_game_index]
                     self.per_generation_data[tutorial_all_game_list.index(game_key)] = True
@@ -245,7 +245,6 @@ class MoveListRowParser:
             if temp_final_data is not None:
                 print('      - 作品', MOVE_LEARN_GAME_LIST[idx], '数据', temp_final_data)
         print()
-        # print('  - 非默认值', self.special_info_dict)
         return self
 
     def generate_insert_params(self, connection: Connection, move_id: int):
@@ -255,7 +254,8 @@ class MoveListRowParser:
         :param move_id: 技能的ID
         :return:
         """
-        result = [move_id, self.dex_number, self.form_name, self.learn_type]
+        # <editor-fold defaultstate="collapsed" desc="生成用于插入数据库的参数数组（函数体）">
+        result = [move_id, self.dex_number, self.form_name, MOVE_LEARN_TYPE[self.learn_type]]
         for temp in self.final_data:
             result.append(temp)
         result.append(self.special_info_dict['gender'])
@@ -263,7 +263,9 @@ class MoveListRowParser:
         result.append(self.special_info_dict['note'])
         result.append(self.special_info_dict['except'])
         return result
+        # </editor-fold>
 
+    # <editor-fold defaultstate="collapsed" desc="Function 插入数据库">
     def insert_data(self, connection: Connection, move_id: int):
         connection.execute(
             'INSERT INTO pokemon_move_learn('
@@ -274,10 +276,11 @@ class MoveListRowParser:
             'black_white, black_white_2, '
             'x_y, omega_ruby_alpha_sapphire, '
             'sun_moon, ultra_sun_ultra_moon, lets_go, '
-            'sword_shield, brilliant_diamond_shinning_pearl, leagend_arceus, '
+            'sword_shield, brilliant_diamond_shinning_pearl, legend_arceus, '
             'additional_gender, additional_generation, additional_note, additional_except) '
             'VALUES ('
             '?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             self.generate_insert_params(connection, move_id)
         )
         connection.commit()
+    # </editor-fold>
